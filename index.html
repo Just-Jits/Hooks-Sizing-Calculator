@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hooks Sizing Calculator</title>
+<style>
+  :root{
+    --ink:#0d0d0d; --paper:#f2f1ee; --card:#ffffff; --line:#d8d6d0; --muted:#6b6960;
+    --flag:#b3452c; --flag-bg:#fbe9e3; --ok-bg:#eef1e9; --ok:#3f5a3d;
+    --note-bg:#eef1f5; --note:#3a4f66;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;padding:32px 18px 64px;}
+  .wrap{max-width:680px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  .brand{font-family:Impact,"Arial Narrow",Helvetica,sans-serif;font-weight:700;font-style:italic;letter-spacing:0.5px;font-size:28px;text-transform:uppercase;}
+  .brand span{color:var(--flag);}
+  h1{font-size:20px;font-weight:600;margin:6px 0 4px;}
+  .sub{color:var(--muted);font-size:14px;line-height:1.5;max-width:56ch;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:2px;padding:24px;margin-bottom:16px;}
+  label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;font-weight:600;}
+  select, input[type=number]{width:100%;padding:11px 12px;border:1px solid #b8b6ae;border-radius:2px;font-size:15px;background:#fff;color:var(--ink);font-family:inherit;}
+  select:focus, input:focus{outline:2px solid var(--ink);outline-offset:1px;}
+  .field{margin-bottom:18px;}
+  .row{display:flex;gap:12px;}
+  .row .field{flex:1;}
+  .small-row{display:flex;gap:8px;}
+  .small-row input{width:100%;}
+  .unit-toggle{display:flex;border:1px solid #b8b6ae;border-radius:2px;overflow:hidden;width:fit-content;margin-top:8px;}
+  .unit-toggle button{border:none;background:#fff;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--muted);font-family:inherit;}
+  .unit-toggle button.active{background:var(--ink);color:#fff;}
+  .result{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);display:none;}
+  .result.show{display:block;}
+  .match-block{margin-bottom:18px;padding-bottom:18px;border-bottom:1px dashed var(--line);}
+  .match-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .result-size{font-family:Impact,"Arial Narrow",Helvetica,sans-serif;font-style:italic;font-size:40px;line-height:1;margin-bottom:6px;}
+  .result-label{font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;margin-bottom:10px;}
+  .flag{background:var(--flag-bg);border-left:3px solid var(--flag);padding:12px 14px;font-size:13.5px;line-height:1.5;margin-top:10px;color:#5c2a1a;}
+  .confidence{background:var(--ok-bg);border-left:3px solid var(--ok);padding:12px 14px;font-size:13.5px;line-height:1.5;margin-top:10px;color:#2e422c;}
+  .note{background:var(--note-bg);border-left:3px solid var(--note);padding:12px 14px;font-size:13.5px;line-height:1.5;margin-top:10px;color:#22303f;}
+  details.measure-toggle{margin-top:12px;}
+  details.measure-toggle summary{font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:6px;}
+  details.measure-toggle summary::-webkit-details-marker{display:none;}
+  details.measure-toggle summary::before{content:"+";font-size:14px;width:14px;}
+  details.measure-toggle[open] summary::before{content:"\2013";}
+  details.measure-toggle table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px;}
+  details.measure-toggle th, details.measure-toggle td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);color:var(--muted);}
+  details.measure-toggle th{color:var(--ink);font-weight:600;}
+  .cut-badge{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 10px;margin-bottom:10px;}
+  .tabs{display:flex;border-bottom:1px solid var(--line);margin:-24px -24px 20px;}
+  .tab-btn{flex:1;text-align:center;padding:16px 12px;font-size:15px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;}
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--ink);font-weight:600;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .gauge{margin-top:18px;}
+  .gauge-labels{display:flex;justify-content:space-between;font-size:10.5px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;}
+  .gauge-name{text-align:center;font-size:12px;font-weight:600;margin-bottom:4px;}
+  .gauge-track{position:relative;height:8px;border-radius:4px;overflow:visible;background:linear-gradient(to right, #c9705f 0%, #c9705f 12%, #7fa36e 12%, #7fa36e 88%, #c9705f 88%, #c9705f 100%);}
+  .gauge-arrow{position:absolute;top:-9px;width:0;height:0;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:9px solid var(--ink);}
+  .carousel-label{font-size:12px;font-weight:600;text-align:center;margin:22px 0 10px;}
+  .carousel{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .carousel-pill{position:relative;flex:0 0 auto;min-width:64px;padding:10px 6px;text-align:center;border:1px solid var(--line);border-radius:2px;background:#efeeea;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;}
+  .carousel-pill.match{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .carousel-pill.preview-fit{outline:2px solid var(--ok);}
+  .carousel-pill.preview-nofit{outline:2px solid var(--flag);}
+  .pill-icon{position:absolute;top:-7px;right:-7px;width:16px;height:16px;border-radius:50%;font-size:10px;line-height:16px;color:#fff;}
+  .pill-icon.yes{background:var(--ok);}
+  .chart-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
+  .chart-table th, .chart-table td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);}
+  .chart-table th{background:var(--ink);color:#fff;font-size:10.5px;text-transform:uppercase;letter-spacing:0.03em;}
+  .chart-table td:first-child, .chart-table th:first-child{text-align:left;font-weight:600;}
+  .chart-section-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin:18px 0 8px;}
+  .chart-caveat{font-size:11.5px;color:var(--muted);margin-top:10px;font-style:italic;}
+  footer{font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px;}
+  .gap-note{font-size:12.5px;color:var(--muted);margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">HOOKS<span>.</span></div>
+    <h1>Ambassador Sizing Calculator</h1>
+    <p class="sub">Enter measurements to get a recommended size. Guide only - always sanity-check anything flagged or borderline before an order ships.</p>
+  </header>
+
+  <div class="card">
+    <div class="field">
+      <label for="category">Product</label>
+      <select id="category">
+        <option value="gi">Gi</option>
+        <option value="kids_gi">Gi - Kids</option>
+        <option value="rash">Rashguard</option>
+        <option value="shorts_u">Shorts - Unisex</option>
+        <option value="shorts_f">Shorts - Women's</option>
+      </select>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tabCalcBtn">Size Chart Calculator</button>
+      <button class="tab-btn" id="tabChartBtn">Size Chart</button>
+    </div>
+
+    <div id="calcPanel" class="tab-panel active">
+      <div id="inputs-hw">
+        <div class="row">
+          <div class="field">
+            <label for="height">Height</label>
+            <input type="number" id="height" placeholder="e.g. 175" min="100" max="230">
+            <div class="small-row" id="heightFtInGroup" style="display:none;">
+              <input type="number" id="heightFt" placeholder="ft">
+              <input type="number" id="heightIn" placeholder="in">
+            </div>
+            <div class="unit-toggle" id="heightUnit">
+              <button data-unit="cm" class="active">cm</button>
+              <button data-unit="ftin">ft/in</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="weight">Weight</label>
+            <input type="number" id="weight" placeholder="e.g. 78" min="15" max="250">
+            <div class="unit-toggle" id="weightUnit">
+              <button data-unit="kg" class="active">kg</button>
+              <button data-unit="lb">lb</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="inputs-w-only" style="display:none;">
+        <div class="field">
+          <label for="weightOnly">Weight</label>
+          <input type="number" id="weightOnly" placeholder="e.g. 78">
+          <div class="unit-toggle" id="weightOnlyUnit">
+            <button data-unit="kg" class="active">kg</button>
+            <button data-unit="lb">lb</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="inputs-waist" style="display:none;">
+        <div class="field" id="waistModeField" style="display:none;">
+          <label>Enter by</label>
+          <div class="unit-toggle" id="waistMode">
+            <button data-unit="waist" class="active">Waist (in)</button>
+            <button data-unit="sizenum">Size number</button>
+          </div>
+        </div>
+        <div class="field" id="waistInField">
+          <label for="waist">Waist (inches)</label>
+          <input type="number" id="waist" placeholder="e.g. 32">
+        </div>
+        <div class="row" id="sizeNumField" style="display:none;">
+          <div class="field">
+            <label for="sizeSystem">System</label>
+            <select id="sizeSystem">
+              <option value="au">AU/UK</option>
+              <option value="us">US</option>
+              <option value="eu">EU</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sizeNumber">Size</label>
+            <input type="number" id="sizeNumber" placeholder="e.g. 10">
+          </div>
+        </div>
+      </div>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <div id="chartPanel" class="tab-panel">
+      <div id="chartPanelContent"></div>
+    </div>
+  </div>
+
+  <div class="gap-note">
+    Kids Rashguard and Kids Shorts aren't in here yet - no weight/height basis to calculate from for either. Add when there's a chart to work from.
+  </div>
+
+  <footer>
+    Built from Hooks' own size charts. When a measurement sits near the top of a bracket, this tool weighs whether an L variant or a full size-up is the better call, since gis are 100% cotton and can shrink.
+  </footer>
+</div>
+
+<script>
+// ================= DATA =================
+const giMen = [
+  {size:"A0", hMin:160,hMax:168, wMin:55,wMax:65},
+  {size:"A1", hMin:165,hMax:170, wMin:65,wMax:74},
+  {size:"A1L",hMin:170,hMax:175, wMin:68,wMax:77},
+  {size:"A2", hMin:170,hMax:178, wMin:77,wMax:85},
+  {size:"A2L",hMin:178,hMax:183, wMin:77,wMax:85},
+  {size:"A2XL",hMin:183,hMax:190,wMin:77,wMax:87},
+  {size:"A3", hMin:178,hMax:188, wMin:87,wMax:100},
+  {size:"A3L",hMin:183,hMax:193, wMin:87,wMax:100},
+  {size:"A4", hMin:185,hMax:193, wMin:100,wMax:115},
+  {size:"A5", hMin:188,hMax:195, wMin:115,wMax:130},
+];
+const giWomen = [
+  {size:"F1", hMin:152,hMax:158, wMin:40,wMax:50},
+  {size:"F2", hMin:155,hMax:160, wMin:50,wMax:57},
+  {size:"F2L",hMin:160,hMax:168, wMin:50,wMax:57},
+  {size:"F3", hMin:160,hMax:168, wMin:57,wMax:65},
+  {size:"F3L",hMin:165,hMax:175, wMin:57,wMax:65},
+  {size:"F4", hMin:168,hMax:172, wMin:65,wMax:75},
+];
+const giKids = [
+  {size:"M00", hMin:110,hMax:119, wMin:16,wMax:23},
+  {size:"M0",  hMin:120,hMax:130, wMin:20,wMax:27},
+  {size:"M1",  hMin:130,hMax:137, wMin:25,wMax:38},
+  {size:"M2",  hMin:138,hMax:145, wMin:34,wMax:45},
+  {size:"M3",  hMin:145,hMax:153, wMin:40,wMax:50},
+  {size:"M4",  hMin:152,hMax:159, wMin:47,wMax:58},
+];
+const giMeasureMen = {
+  A0:  {A:157,B:72,C:54,D:52,E:94},
+  A1:  {A:159,B:74,C:55,D:54,E:96},
+  A1L: {A:165,B:77,C:56,D:54,E:99},
+  A2:  {A:167,B:78,C:57,D:56,E:99},
+  A2L: {A:172,B:82,C:57,D:56,E:107},
+  A2XL:{A:177,B:84,C:58,D:60,E:107},
+  A3:  {A:174,B:86,C:62,D:62,E:106},
+  A3L: {A:179,B:90,C:59,D:62,E:108},
+  A4:  {A:182,B:86,C:65,D:62,E:106},
+  A5:  {A:187,B:90,C:68,D:64,E:109},
+};
+const giMeasureWomen = {
+  F1:  {A:137,B:65,C:45,D:46,E:84},
+  F2:  {A:145,B:68,C:47,D:48,E:88},
+  F2L: {A:153,B:72,C:47,D:48,E:94},
+  F3:  {A:153,B:72,C:51,D:50,E:92},
+  F3L: {A:161,B:76,C:51,D:50,E:99},
+  F4:  {A:161,B:76,C:54,D:52,E:96},
+};
+const giMeasureKids = {
+  M00: {A:120,B:56,C:44,D:39,E:70},
+  M0:  {A:126,B:59,C:46,D:41,E:74},
+  M1:  {A:132,B:62,C:48,D:43,E:76},
+  M2:  {A:138,B:65,C:50,D:46,E:80},
+  M3:  {A:144,B:68,C:52,D:48,E:82},
+  M4:  {A:150,B:71,C:54,D:50,E:84},
+};
+const rashguard = [
+  {size:"2XS", wMin:38, wMax:45},
+  {size:"XS",  wMin:45, wMax:60},
+  {size:"S",   wMin:60, wMax:70},
+  {size:"M",   wMin:70, wMax:82},
+  {size:"L",   wMin:82, wMax:93},
+  {size:"XL",  wMin:93, wMax:104},
+  {size:"2XL", wMin:102,wMax:115},
+  {size:"3XL", wMin:115,wMax:999},
+];
+const shortsUnisex = [
+  {size:"XS",  min:26, max:28},
+  {size:"S",   min:29, max:30},
+  {size:"M",   min:31, max:32},
+  {size:"L",   min:33, max:34},
+  {size:"XL",  min:35, max:36},
+  {size:"XXL", min:37, max:40},
+  {size:"XXXL",min:41, max:42},
+];
+const shortsWomen = [
+  {size:"XS",  min:0,  max:26},
+  {size:"S",   min:27, max:28},
+  {size:"M",   min:29, max:30},
+  {size:"L",   min:31, max:32},
+  {size:"XL",  min:33, max:34},
+  {size:"2XL", min:35, max:36},
+];
+// General guide only - AU tracks UK numerically; US = AU-4; EU = AU+28 (roughly, per standard conversion).
+const womensShortsIntl = {
+  XS:  {au:8,  us:4,  eu:36},
+  S:   {au:10, us:6,  eu:38},
+  M:   {au:12, us:8,  eu:40},
+  L:   {au:14, us:10, eu:42},
+  XL:  {au:16, us:12, eu:44},
+  "2XL":{au:18,us:14, eu:46},
+};
+
+// ================= UNIT HELPERS =================
+function cmFromIn(v){ return v*2.54; }
+function kgFromLb(v){ return v*0.453592; }
+function ftInToCm(ft, inches){ return (ft*12 + inches) * 2.54; }
+function cmToFtIn(cm){
+  let totalIn = cm / 2.54;
+  let ft = Math.floor(totalIn / 12);
+  let inch = Math.round(totalIn - ft*12);
+  if(inch === 12){ ft += 1; inch = 0; }
+  return ft + "'" + inch + '"';
+}
+function kgToLb(kg){ return Math.round(kg / 0.453592); }
+const PLAUSIBLE_HEIGHT_CM = {min:90, max:210};
+const PLAUSIBLE_WEIGHT_KG = {min:14, max:180};
+function isPlausible(heightCm, weightKg){
+  return heightCm >= PLAUSIBLE_HEIGHT_CM.min && heightCm <= PLAUSIBLE_HEIGHT_CM.max
+      && weightKg >= PLAUSIBLE_WEIGHT_KG.min && weightKg <= PLAUSIBLE_WEIGHT_KG.max;
+}
+
+let currentHeightCm = null, currentWeightKg = null;
+
+function getHeightCm(){
+  const unit = getUnit(document.getElementById('heightUnit'));
+  if(unit === 'cm'){
+    const v = parseFloat(document.getElementById('height').value);
+    return isNaN(v) ? null : v;
+  }
+  const ftVal = document.getElementById('heightFt').value;
+  const inVal = document.getElementById('heightIn').value;
+  if(ftVal === '' && inVal === '') return null;
+  const ft = parseFloat(ftVal) || 0;
+  const inch = parseFloat(inVal) || 0;
+  return ftInToCm(ft, inch);
+}
+function getUnit(container){ return container.querySelector('button.active').dataset.unit; }
+
+// ================= GI MEASUREMENT / DECISION HELPERS =================
+function measureFor(size, tag){
+  const table = tag==='men' ? giMeasureMen : (tag==='kids' ? giMeasureKids : giMeasureWomen);
+  return table[size] || null;
+}
+function buildGiMeasureTable(match){
+  const m = measureFor(match.size, match.tag);
+  let html = '<table>';
+  html += '<tr><th>Size</th><td>' + match.size + '</td></tr>';
+  html += '<tr><th>Height range</th><td>' + match.hMin + '-' + match.hMax + 'cm</td></tr>';
+  html += '<tr><th>Weight range</th><td>' + match.wMin + '-' + match.wMax + 'kg</td></tr>';
+  if(m){
+    html += '<tr><th>Jacket width</th><td>' + m.A + 'cm</td></tr>';
+    html += '<tr><th>Jacket length</th><td>' + m.B + 'cm</td></tr>';
+    html += '<tr><th>Chest</th><td>' + m.C + 'cm</td></tr>';
+    html += '<tr><th>Pant tie width</th><td>' + m.D + 'cm</td></tr>';
+    html += '<tr><th>Pant length</th><td>' + m.E + 'cm</td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+function findMatches(heightCm, weightKg, chart, tag){
+  return chart.filter(function(s){ return heightCm>=s.hMin && heightCm<=s.hMax && weightKg>=s.wMin && weightKg<=s.wMax; })
+    .map(function(s){ return Object.assign({}, s, {tag:tag}); });
+}
+function nearestGi(heightCm, weightKg, chart, tag){
+  let scored = chart.map(function(s){
+    const hMid=(s.hMin+s.hMax)/2, wMid=(s.wMin+s.wMax)/2;
+    const hRange=(s.hMax-s.hMin)||1, wRange=(s.wMax-s.wMin)||1;
+    const hDist=Math.abs(heightCm-hMid)/hRange;
+    const wDist=Math.abs(weightKg-wMid)/wRange;
+    return {s: Object.assign({}, s, {tag:tag}), score: hDist*1.2 + wDist};
+  });
+  scored.sort(function(a,b){ return a.score-b.score; });
+  return scored[0].s;
+}
+function diffNote(sizeA, tagA, sizeB, tagB){
+  const mA = measureFor(sizeA, tagA), mB = measureFor(sizeB, tagB);
+  const general = "As a general rule: men's gis run wider through the chest and pants; women's gis are cut more tapered through the body.";
+  if(!mA || !mB) return general;
+  const bits = [];
+  if(Math.abs(mA.C - mB.C) >= 3) bits.push((mA.C > mB.C ? sizeA : sizeB) + ' runs roomier through the chest');
+  if(Math.abs(mA.E - mB.E) >= 3) bits.push((mA.E > mB.E ? sizeA : sizeB) + ' has longer pant legs');
+  if(Math.abs(mA.B - mB.B) >= 3) bits.push((mA.B > mB.B ? sizeA : sizeB) + ' has a longer jacket');
+  if(bits.length === 0) return general + ' ' + sizeA + ' and ' + sizeB + ' measure very close here - either should work.';
+  return general + ' For this pair specifically: ' + bits.join('; ') + '.';
+}
+
+function giBlock(match){
+  const size = match.size, tag = match.tag, hMin = match.hMin, hMax = match.hMax, wMin = match.wMin, wMax = match.wMax;
+  let html = '<div class="match-block">';
+  html += '<div class="cut-badge">' + (tag==='men' ? "Men's cut" : tag==='kids' ? "Kids'" : "Women's cut") + '</div>';
+  html += '<div class="result-size">' + size + '</div>';
+
+  const heightPct = Math.max(0, Math.min(1, (currentHeightCm - hMin) / (hMax - hMin)));
+  const weightPct = Math.max(0, Math.min(1, (currentWeightKg - wMin) / (wMax - wMin)));
+  const heightNearTop = heightPct >= 0.65;
+  const weightNearTop = weightPct >= 0.75;
+
+  const lSize = (tag==='kids' || size.endsWith('L')) ? null : size + 'L';
+  const chart = tag==='men' ? giMen : (tag==='kids' ? giKids : giWomen);
+  const lExists = lSize && chart.find(function(s){ return s.size===lSize; });
+
+  function findNextUp(){
+    const anchor = lExists ? lSize : size;
+    const idx = chart.findIndex(function(s){ return s.size===anchor; });
+    return (idx>=0 && idx+1<chart.length) ? chart[idx+1] : null;
+  }
+  const nextUp = findNextUp();
+
+  if(heightNearTop && weightNearTop){
+    if(nextUp){
+      html += '<div class="note">Both height and weight are high in this bracket - recommend <strong>' + nextUp.size + '</strong> rather than ' + (lExists ? lSize : size) + '. ' + (lExists ? lSize + ' only adds length, not weight capacity, ' : '') + 'and this is already near the top on weight too. ' + nextUp.size + "'s range starts at " + nextUp.hMin + 'cm, which lines up well here, and gives more room on weight - plus shrinkage after a few washes will bring it in a bit anyway.</div>';
+    } else {
+      html += '<div class="flag">At the top of both height and weight for this size, and there\'s no larger size available - worth a manual check.</div>';
+    }
+  } else if(heightNearTop && lExists){
+    const mBase = measureFor(size, tag), mL = measureFor(lSize, tag);
+    let detail = '';
+    if(mBase && mL){
+      detail = ' (' + lSize + ' runs ' + (mL.E-mBase.E) + 'cm longer in the leg, ' + (mL.B-mBase.B) + 'cm longer in the jacket)';
+    }
+    html += '<div class="note">Height is high in this bracket but weight is comfortable - <strong>' + lSize + '</strong> is the better call' + detail + ', extra length without changing the weight fit.</div>';
+  } else if(heightNearTop && !lExists && nextUp){
+    html += '<div class="note">Height is high in this bracket - worth checking <strong>' + nextUp.size + '</strong> for extra length. Weight is comfortable here, so it should still fit well through the body.</div>';
+  } else if(weightNearTop && !heightNearTop){
+    html += '<div class="flag">Weight is high for this size while height is comfortable - sizing up would run a little loose on length. Worth a manual check, or lean on shrinkage (100% cotton) since it should ease in after a few washes.</div>';
+  } else {
+    html += '<div class="confidence">Comfortably within range - no flags.</div>';
+  }
+
+  html += '<details class="measure-toggle"><summary>View measurements</summary>' + buildGiMeasureTable(match) + '</details>';
+  html += '</div>';
+  return html;
+}
+
+// ================= GAUGE =================
+function gaugeMarkup(label, arrowPos){
+  return '<div class="gauge"><div class="gauge-name">' + label + '</div>'
+    + '<div class="gauge-labels"><span>Tight</span><span>Loose</span></div>'
+    + '<div class="gauge-track"><div class="gauge-arrow" style="left:' + arrowPos + '%;"></div></div></div>';
+}
+function gaugeHTML(label, value, min, max, isExact){
+  let pct = (value - min) / (max - min);
+  if(isExact === false){
+    pct = Math.max(-0.3, Math.min(1.3, pct));
+    const arrowPos = Math.max(0, Math.min(100, (1 - pct) * 100 * (100/160) + 12));
+    return gaugeMarkup(label, arrowPos);
+  }
+  pct = Math.max(0, Math.min(1, pct));
+  const arrowPos = 88 - pct * (88 - 12);
+  return gaugeMarkup(label, arrowPos);
+}
+
+// ================= CAROUSELS =================
+function giCarouselHTML(matches){
+  const matchSizes = matches.map(function(m){ return m.size + '|' + m.tag; });
+  const all = giMen.map(function(s){ return Object.assign({}, s, {tag:'men'}); })
+    .concat(giWomen.map(function(s){ return Object.assign({}, s, {tag:'women'}); }));
+  let html = '<div class="carousel-label">See other sizes</div><div class="carousel">';
+  all.forEach(function(s){
+    const key = s.size + '|' + s.tag;
+    const isMatch = matchSizes.indexOf(key) !== -1;
+    html += '<div class="carousel-pill' + (isMatch?' match':'') + '" data-size="' + s.size + '" data-hmin="' + s.hMin + '" data-hmax="' + s.hMax + '" data-wmin="' + s.wMin + '" data-wmax="' + s.wMax + '">'
+      + (isMatch ? '<span class="pill-icon yes">&#10003;</span>' : '') + s.size + '</div>';
+  });
+  html += '</div><div id="carouselPreview" class="note" style="display:none;"></div>';
+  return html;
+}
+function wireGiCarousel(){
+  document.querySelectorAll('.carousel-pill[data-hmin]').forEach(function(pill){
+    pill.addEventListener('click', function(){
+      document.querySelectorAll('.carousel-pill').forEach(function(p){ p.classList.remove('preview-fit','preview-nofit'); });
+      const hMin=+pill.dataset.hmin, hMax=+pill.dataset.hmax, wMin=+pill.dataset.wmin, wMax=+pill.dataset.wmax;
+      const fits = currentHeightCm>=hMin && currentHeightCm<=hMax && currentWeightKg>=wMin && currentWeightKg<=wMax;
+      pill.classList.add(fits ? 'preview-fit' : 'preview-nofit');
+      const preview = document.getElementById('carouselPreview');
+      preview.style.display = 'block';
+      preview.innerHTML = fits
+        ? '<strong>' + pill.dataset.size + '</strong> would also fit your measurements.'
+        : '<strong>' + pill.dataset.size + '</strong> is outside your measurements - height ' + hMin + '-' + hMax + 'cm, weight ' + wMin + '-' + wMax + 'kg.';
+    });
+  });
+}
+function simpleCarouselHTML(items, matchedSize, dimKeys){
+  let html = '<div class="carousel-label">See other sizes</div><div class="carousel">';
+  items.forEach(function(s){
+    const isMatch = s.size === matchedSize;
+    let attrs = '';
+    dimKeys.forEach(function(k){ attrs += ' data-' + k.toLowerCase() + '="' + s[k] + '"'; });
+    html += '<div class="carousel-pill' + (isMatch?' match':'') + '" data-size="' + s.size + '"' + attrs + '>'
+      + (isMatch ? '<span class="pill-icon yes">&#10003;</span>' : '') + s.size + '</div>';
+  });
+  html += '</div><div id="carouselPreview" class="note" style="display:none;"></div>';
+  return html;
+}
+function wireSimpleCarousel(fitCheckFn, labelFn){
+  document.querySelectorAll('.carousel-pill').forEach(function(pill){
+    pill.addEventListener('click', function(){
+      document.querySelectorAll('.carousel-pill').forEach(function(p){ p.classList.remove('preview-fit','preview-nofit'); });
+      const fits = fitCheckFn(pill);
+      pill.classList.add(fits ? 'preview-fit' : 'preview-nofit');
+      const preview = document.getElementById('carouselPreview');
+      preview.style.display = 'block';
+      preview.innerHTML = labelFn(pill, fits);
+    });
+  });
+}
+
+// ================= STATIC SIZE CHART TAB =================
+function renderChartPanel(cat){
+  const el = document.getElementById('chartPanelContent');
+  let html = '';
+  if(cat === 'gi'){
+    html += '<div class="chart-section-label">Men\'s Gi</div><table class="chart-table"><tr><th>Size</th><th>Height (cm)</th><th>Height (ft/in)</th><th>Weight (kg)</th><th>Weight (lb)</th></tr>';
+    giMen.forEach(function(s){
+      html += '<tr><td>' + s.size + '</td><td>' + s.hMin + '-' + s.hMax + '</td><td>' + cmToFtIn(s.hMin) + ' - ' + cmToFtIn(s.hMax) + '</td><td>' + s.wMin + '-' + s.wMax + '</td><td>' + kgToLb(s.wMin) + '-' + kgToLb(s.wMax) + '</td></tr>';
+    });
+    html += '</table>';
+    html += '<div class="chart-section-label">Women\'s Gi</div><table class="chart-table"><tr><th>Size</th><th>Height (cm)</th><th>Height (ft/in)</th><th>Weight (kg)</th><th>Weight (lb)</th></tr>';
+    giWomen.forEach(function(s){
+      html += '<tr><td>' + s.size + '</td><td>' + s.hMin + '-' + s.hMax + '</td><td>' + cmToFtIn(s.hMin) + ' - ' + cmToFtIn(s.hMax) + '</td><td>' + s.wMin + '-' + s.wMax + '</td><td>' + kgToLb(s.wMin) + '-' + kgToLb(s.wMax) + '</td></tr>';
+    });
+    html += '</table>';
+  } else if(cat === 'kids_gi'){
+    html += '<div class="chart-section-label">Kids Gi</div><table class="chart-table"><tr><th>Size</th><th>Height (cm)</th><th>Height (ft/in)</th><th>Weight (kg)</th><th>Weight (lb)</th></tr>';
+    giKids.forEach(function(s){
+      html += '<tr><td>' + s.size + '</td><td>' + s.hMin + '-' + s.hMax + '</td><td>' + cmToFtIn(s.hMin) + ' - ' + cmToFtIn(s.hMax) + '</td><td>' + s.wMin + '-' + s.wMax + '</td><td>' + kgToLb(s.wMin) + '-' + kgToLb(s.wMax) + '</td></tr>';
+    });
+    html += '</table>';
+  } else if(cat === 'rash'){
+    html += '<div class="chart-section-label">Rashguard</div><table class="chart-table"><tr><th>Size</th><th>Weight (kg)</th><th>Weight (lb)</th></tr>';
+    rashguard.forEach(function(s){
+      const wMaxLabel = s.wMax===999 ? '115+' : s.wMax;
+      const lbMaxLabel = s.wMax===999 ? (kgToLb(115)+'+') : kgToLb(s.wMax);
+      html += '<tr><td>' + s.size + '</td><td>' + s.wMin + '-' + wMaxLabel + '</td><td>' + kgToLb(s.wMin) + '-' + lbMaxLabel + '</td></tr>';
+    });
+    html += '</table>';
+  } else if(cat === 'shorts_u'){
+    html += '<div class="chart-section-label">Shorts - Unisex</div><table class="chart-table"><tr><th>Size</th><th>Waist (in)</th><th>Waist (cm)</th></tr>';
+    shortsUnisex.forEach(function(s){
+      html += '<tr><td>' + s.size + '</td><td>' + s.min + '-' + s.max + '</td><td>' + Math.round(cmFromIn(s.min)) + '-' + Math.round(cmFromIn(s.max)) + '</td></tr>';
+    });
+    html += '</table>';
+  } else if(cat === 'shorts_f'){
+    html += '<div class="chart-section-label">Shorts - Women\'s</div><table class="chart-table"><tr><th>Size</th><th>Waist (in)</th><th>Waist (cm)</th><th>AU/UK</th><th>US</th><th>EU</th></tr>';
+    shortsWomen.forEach(function(s){
+      const intl = womensShortsIntl[s.size] || {};
+      html += '<tr><td>' + s.size + '</td><td>' + s.min + '-' + s.max + '</td><td>' + Math.round(cmFromIn(s.min)) + '-' + Math.round(cmFromIn(s.max)) + '</td><td>' + (intl.au||'-') + '</td><td>' + (intl.us||'-') + '</td><td>' + (intl.eu||'-') + '</td></tr>';
+    });
+    html += '</table>';
+    html += '<div class="chart-caveat">AU/US/EU are a general guide based on standard conversion - actual fit varies by brand and cut, so treat this as a starting point, not exact.</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ================= TABS =================
+const tabCalcBtn = document.getElementById('tabCalcBtn');
+const tabChartBtn = document.getElementById('tabChartBtn');
+const calcPanel = document.getElementById('calcPanel');
+const chartPanel = document.getElementById('chartPanel');
+tabCalcBtn.addEventListener('click', function(){
+  tabCalcBtn.classList.add('active'); tabChartBtn.classList.remove('active');
+  calcPanel.classList.add('active'); chartPanel.classList.remove('active');
+});
+tabChartBtn.addEventListener('click', function(){
+  tabChartBtn.classList.add('active'); tabCalcBtn.classList.remove('active');
+  chartPanel.classList.add('active'); calcPanel.classList.remove('active');
+  renderChartPanel(categorySelect.value);
+});
+
+// ================= INPUT WIRING =================
+const categorySelect = document.getElementById('category');
+const inputsHW = document.getElementById('inputs-hw');
+const inputsWOnly = document.getElementById('inputs-w-only');
+const inputsWaist = document.getElementById('inputs-waist');
+const heightCmField = document.getElementById('height');
+const heightFtInGroup = document.getElementById('heightFtInGroup');
+
+document.getElementById('heightUnit').querySelectorAll('button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.getElementById('heightUnit').querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    const isFtIn = btn.dataset.unit === 'ftin';
+    heightCmField.style.display = isFtIn ? 'none' : 'block';
+    heightFtInGroup.style.display = isFtIn ? 'flex' : 'none';
+    calculate();
+  });
+});
+document.querySelectorAll('.unit-toggle').forEach(function(tg){
+  if(tg.id === 'heightUnit') return;
+  tg.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tg.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      if(tg.id === 'waistMode'){
+        const isSizeNum = btn.dataset.unit === 'sizenum';
+        document.getElementById('waistInField').style.display = isSizeNum ? 'none' : 'block';
+        document.getElementById('sizeNumField').style.display = isSizeNum ? 'flex' : 'none';
+      }
+      calculate();
+    });
+  });
+});
+
+function updateInputsVisibility(){
+  const cat = categorySelect.value;
+  inputsHW.style.display = (cat==='gi'||cat==='kids_gi') ? 'block':'none';
+  inputsWOnly.style.display = (cat==='rash') ? 'block':'none';
+  inputsWaist.style.display = (cat==='shorts_u'||cat==='shorts_f') ? 'block':'none';
+  document.getElementById('waistModeField').style.display = (cat==='shorts_f') ? 'block':'none';
+  if(cat !== 'shorts_f'){
+    document.getElementById('waistInField').style.display = 'block';
+    document.getElementById('sizeNumField').style.display = 'none';
+    document.getElementById('waistMode').querySelectorAll('button').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+  }
+  tabCalcBtn.classList.add('active'); tabChartBtn.classList.remove('active');
+  calcPanel.classList.add('active'); chartPanel.classList.remove('active');
+}
+categorySelect.addEventListener('change', function(){ updateInputsVisibility(); document.getElementById('result').classList.remove('show'); document.getElementById('result').innerHTML=''; });
+['height','heightFt','heightIn','weight','weightOnly','waist','sizeNumber'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', calculate);
+});
+document.getElementById('sizeSystem').addEventListener('change', calculate);
+
+function matchSingle(val, chart, key1, key2){
+  let exact = chart.find(function(s){ return val>=s[key1] && val<=s[key2]; });
+  if(exact) return {match:exact, exact:true};
+  let scored = chart.map(function(s){
+    const mid=(s[key1]+s[key2])/2;
+    return {s:s, score: Math.abs(val-mid)};
+  });
+  scored.sort(function(a,b){ return a.score-b.score; });
+  return {match:scored[0].s, exact:false};
+}
+
+// ================= MAIN CALCULATE =================
+function calculate(){
+  const cat = categorySelect.value;
+  const resultEl = document.getElementById('result');
+  resultEl.innerHTML = '';
+
+  if(cat === 'gi' || cat === 'kids_gi'){
+    const heightCm = getHeightCm();
+    const wRaw = parseFloat(document.getElementById('weight').value);
+    const wUnit = getUnit(document.getElementById('weightUnit'));
+    if(heightCm === null || isNaN(wRaw)){ resultEl.classList.remove('show'); return; }
+    const weightKg = wUnit==='lb' ? kgFromLb(wRaw) : wRaw;
+    if(!isPlausible(heightCm, weightKg)){
+      resultEl.innerHTML = '<div class="flag">That doesn\'t look like a valid height/weight combination (' + Math.round(heightCm) + 'cm, ' + Math.round(weightKg) + 'kg) - double check the numbers and units before continuing.</div>';
+      resultEl.classList.add('show');
+      return;
+    }
+    currentHeightCm = heightCm; currentWeightKg = weightKg;
+
+    if(cat === 'gi'){
+      let matches = findMatches(heightCm, weightKg, giMen, 'men').concat(findMatches(heightCm, weightKg, giWomen, 'women'));
+      let html = '';
+      if(matches.length === 0){
+        const nearest = nearestGi(heightCm, weightKg, giMen, 'men');
+        html += '<div class="note">No exact bracket match - closest is <strong>' + nearest.size + "</strong> (men's chart). Worth a manual check, this is outside all listed ranges.</div>";
+        html += giBlock(nearest);
+        html += gaugeHTML('Weight', weightKg, nearest.wMin, nearest.wMax, false) + gaugeHTML('Height', heightCm, nearest.hMin, nearest.hMax, false);
+        html += giCarouselHTML([nearest]);
+      } else if(matches.length === 1){
+        html += '<div class="confidence">Height and weight both fall within this size\'s range.</div>';
+        html += giBlock(matches[0]);
+        html += gaugeHTML('Weight', weightKg, matches[0].wMin, matches[0].wMax) + gaugeHTML('Height', heightCm, matches[0].hMin, matches[0].hMax);
+        html += giCarouselHTML(matches);
+      } else {
+        html += '<div class="confidence">Both height and weight overlap more than one bracket - here\'s both, with the call coming down to build.</div>';
+        matches.forEach(function(m,i){
+          html += giBlock(m);
+          if(i < matches.length-1) html += '<div class="or-divider">or</div>';
+        });
+        const note = diffNote(matches[0].size, matches[0].tag, matches[1].size, matches[1].tag);
+        if(note) html += '<div class="note">' + note + '</div>';
+        html += gaugeHTML('Weight', weightKg, matches[0].wMin, matches[0].wMax) + gaugeHTML('Height', heightCm, matches[0].hMin, matches[0].hMax);
+        html += giCarouselHTML(matches);
+      }
+      resultEl.innerHTML = html;
+      resultEl.classList.add('show');
+      wireGiCarousel();
+    } else {
+      let matches = findMatches(heightCm, weightKg, giKids, 'kids');
+      let html = '';
+      if(matches.length === 0){
+        const nearest = nearestGi(heightCm, weightKg, giKids, 'kids');
+        html += '<div class="note">No exact bracket match - closest is <strong>' + nearest.size + '</strong>. Worth a manual check, this is outside all listed ranges.</div>';
+        html += giBlock(nearest);
+        html += gaugeHTML('Weight', weightKg, nearest.wMin, nearest.wMax, false) + gaugeHTML('Height', heightCm, nearest.hMin, nearest.hMax, false);
+      } else {
+        html += '<div class="confidence">Height and weight both fall within this size\'s range.</div>';
+        html += giBlock(matches[0]);
+        html += gaugeHTML('Weight', weightKg, matches[0].wMin, matches[0].wMax) + gaugeHTML('Height', heightCm, matches[0].hMin, matches[0].hMax);
+      }
+      resultEl.innerHTML = html;
+      resultEl.classList.add('show');
+    }
+  }
+
+  if(cat === 'rash'){
+    const wRaw = parseFloat(document.getElementById('weightOnly').value);
+    if(isNaN(wRaw)){ resultEl.classList.remove('show'); return; }
+    const wUnit = getUnit(document.getElementById('weightOnlyUnit'));
+    const weightKg = wUnit==='lb' ? kgFromLb(wRaw) : wRaw;
+    if(weightKg < PLAUSIBLE_WEIGHT_KG.min || weightKg > PLAUSIBLE_WEIGHT_KG.max){
+      resultEl.innerHTML = '<div class="flag">That doesn\'t look like a valid weight (' + Math.round(weightKg) + 'kg) - double check the number and unit.</div>';
+      resultEl.classList.add('show');
+      return;
+    }
+    const res = matchSingle(weightKg, rashguard, 'wMin', 'wMax');
+    const match = res.match, exact = res.exact;
+    let html = '<div class="match-block"><div class="cut-badge">Rashguard</div><div class="result-size">' + match.size + '</div>';
+    html += exact ? '<div class="confidence">Weight falls within this size\'s range.</div>' : '<div class="note">Closest match - outside all listed brackets, worth a manual check.</div>';
+    if(exact){
+      const frac = (weightKg-match.wMin)/(match.wMax-match.wMin);
+      if(frac >= 0.85 || frac <= 0.15){
+        const isHigh = frac >= 0.85;
+        html += '<div class="note">Right on the ' + (isHigh ? 'top' : 'bottom') + ' edge of this bracket - comes down to preferred fit. Snug fit: ' + (isHigh ? 'stick with this size' : 'this size is right') + '. Relaxed fit: ' + (isHigh ? 'consider sizing up' : 'consider sizing down') + '.</div>';
+      }
+    }
+    html += '<details class="measure-toggle"><summary>View measurements</summary><table>'
+      + '<tr><th>Size</th><td>' + match.size + '</td></tr>'
+      + '<tr><th>Weight range</th><td>' + match.wMin + '-' + (match.wMax===999?'115+':match.wMax) + 'kg</td></tr>'
+      + '</table></details>';
+    html += '</div>';
+    html += gaugeHTML('Weight', weightKg, match.wMin, match.wMax===999?150:match.wMax, exact);
+    html += simpleCarouselHTML(rashguard, match.size, ['wMin','wMax']);
+    resultEl.innerHTML = html;
+    resultEl.classList.add('show');
+    wireSimpleCarousel(
+      function(pill){
+        const wMin=+pill.dataset.wmin, wMax=+pill.dataset.wmax;
+        return weightKg>=wMin && weightKg<=wMax;
+      },
+      function(pill, fits){
+        const wMin=pill.dataset.wmin, wMax=pill.dataset.wmax;
+        return fits ? '<strong>' + pill.dataset.size + '</strong> would also fit your weight.' : '<strong>' + pill.dataset.size + '</strong> is outside your weight - range ' + wMin + '-' + wMax + 'kg.';
+      }
+    );
+  }
+
+  if(cat==='shorts_u' || cat==='shorts_f'){
+    const chart = cat==='shorts_u' ? shortsUnisex : shortsWomen;
+    const byWaistMode = cat==='shorts_u' || getUnit(document.getElementById('waistMode')) === 'waist';
+
+    let res, waistForGauge;
+    if(byWaistMode){
+      const waist = parseFloat(document.getElementById('waist').value);
+      if(isNaN(waist)){ resultEl.classList.remove('show'); return; }
+      res = matchSingle(waist, chart, 'min', 'max');
+      waistForGauge = waist;
+    } else {
+      const sysVal = parseFloat(document.getElementById('sizeNumber').value);
+      const sys = document.getElementById('sizeSystem').value;
+      if(isNaN(sysVal)){ resultEl.classList.remove('show'); return; }
+      let best = null, bestDist = Infinity;
+      Object.keys(womensShortsIntl).forEach(function(sizeKey){
+        const dist = Math.abs(womensShortsIntl[sizeKey][sys] - sysVal);
+        if(dist < bestDist){ bestDist = dist; best = sizeKey; }
+      });
+      const match = chart.find(function(s){ return s.size === best; });
+      res = {match: match, exact: bestDist === 0};
+      waistForGauge = (match.min + match.max) / 2;
+    }
+
+    let html = '<div class="match-block"><div class="cut-badge">' + (cat==='shorts_u' ? "Shorts - Unisex" : "Shorts - Women's") + '</div><div class="result-size">' + res.match.size + '</div>';
+    if(byWaistMode){
+      html += res.exact ? '<div class="confidence">Waist falls within this size\'s range.</div>' : '<div class="note">Closest match - outside all listed brackets, worth a manual check.</div>';
+    } else {
+      html += res.exact ? '<div class="confidence">Matches this size exactly.</div>' : '<div class="note">Closest size - sizing systems don\'t always line up exactly, worth double-checking against the waist chart too.</div>';
+    }
+    let measureRows = '<tr><th>Size</th><td>' + res.match.size + '</td></tr>'
+      + '<tr><th>Waist range</th><td>' + res.match.min + '-' + res.match.max + 'in</td></tr>';
+    if(cat === 'shorts_f'){
+      const intl = womensShortsIntl[res.match.size];
+      if(intl){
+        measureRows += '<tr><th>AU/UK size</th><td>' + intl.au + '</td></tr>';
+        measureRows += '<tr><th>US size</th><td>' + intl.us + '</td></tr>';
+        measureRows += '<tr><th>EU size</th><td>' + intl.eu + '</td></tr>';
+      }
+    }
+    html += '<details class="measure-toggle"><summary>View measurements</summary><table>' + measureRows + '</table></details>';
+    html += '</div>';
+    html += gaugeHTML('Waist', waistForGauge, res.match.min, res.match.max, res.exact);
+    html += simpleCarouselHTML(chart, res.match.size, ['min','max']);
+    resultEl.innerHTML = html;
+    resultEl.classList.add('show');
+    wireSimpleCarousel(
+      function(pill){
+        const min=+pill.dataset.min, max=+pill.dataset.max;
+        return waistForGauge>=min && waistForGauge<=max;
+      },
+      function(pill, fits){
+        const min=pill.dataset.min, max=pill.dataset.max;
+        return fits ? '<strong>' + pill.dataset.size + '</strong> would also fit.' : '<strong>' + pill.dataset.size + '</strong> is outside this range - ' + min + '-' + max + 'in.';
+      }
+    );
+  }
+}
+
+updateInputsVisibility();
+renderChartPanel(categorySelect.value);
+categorySelect.addEventListener('change', function(){ renderChartPanel(categorySelect.value); });
+
+document.querySelectorAll('input[type=number]').forEach(function(inp){
+  inp.addEventListener('wheel', function(e){ inp.blur(); }, {passive:true});
+});
+</script>
+</body>
+</html>
